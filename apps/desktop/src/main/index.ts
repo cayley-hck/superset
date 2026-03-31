@@ -18,8 +18,11 @@ import {
 import { applyShellEnvToProcess } from "lib/trpc/routers/workspaces/utils/shell-env";
 import {
 	DEFAULT_CONFIRM_ON_QUIT,
+	FONT_PROTOCOL,
+	ICON_PROTOCOL,
 	PLATFORM,
 	PROTOCOL_SCHEME,
+	SESSION_PARTITION,
 } from "shared/constants";
 import { setupAgentHooks } from "./lib/agent-setup";
 import { initAppState } from "./lib/app-state";
@@ -39,13 +42,31 @@ import {
 } from "./lib/terminal";
 import { disposeTray, initTray } from "./lib/tray";
 import { MainWindow } from "./windows/main";
+import { env as mainEnv } from "./env.main";
+import { getWorkspaceName as getEnvWorkspaceNameForInit } from "shared/env.shared";
 
 console.log("[main] Local database ready:", !!localDb);
+console.log("[main] Runtime endpoints:", {
+	apiUrl: mainEnv.NEXT_PUBLIC_API_URL,
+	webUrl: mainEnv.NEXT_PUBLIC_WEB_URL,
+	electricBaseUrl: mainEnv.NEXT_PUBLIC_ELECTRIC_URL,
+	electricShapeUrl: `${mainEnv.NEXT_PUBLIC_ELECTRIC_URL}/v1/shape`,
+});
 const IS_DEV = process.env.NODE_ENV === "development";
 
 void applyShellEnvToProcess().catch((error) => {
 	console.error("[main] Failed to apply shell environment:", error);
 });
+
+// Custom workspace builds: isolate app identity so they can run alongside the official release.
+// Must happen before requestSingleInstanceLock (which keys on app name + userData path).
+const customWorkspace = getEnvWorkspaceNameForInit();
+if (customWorkspace) {
+	const customName = customWorkspace.charAt(0).toUpperCase() + customWorkspace.slice(1);
+	app.setName(customName);
+	// Force a separate userData directory so Electron won't share lockfiles/sessions with the official build
+	app.setPath("userData", path.join(app.getPath("appData"), customName));
+}
 
 // Dev mode: label the app with the workspace name so multiple worktrees are distinguishable
 if (IS_DEV) {
@@ -185,7 +206,7 @@ app.on("before-quit", async (event) => {
 				buttons: ["Quit", "Cancel"],
 				defaultId: 0,
 				cancelId: 1,
-				title: "Quit Superset",
+				title: `Quit ${app.name}`,
 				message: "Are you sure you want to quit?",
 			});
 
@@ -247,7 +268,7 @@ if (process.env.NODE_ENV === "development") {
 
 protocol.registerSchemesAsPrivileged([
 	{
-		scheme: "superset-icon",
+		scheme: ICON_PROTOCOL,
 		privileges: {
 			standard: true,
 			secure: true,
@@ -256,7 +277,7 @@ protocol.registerSchemesAsPrivileged([
 		},
 	},
 	{
-		scheme: "superset-font",
+		scheme: FONT_PROTOCOL,
 		privileges: {
 			standard: true,
 			secure: true,
@@ -266,7 +287,9 @@ protocol.registerSchemesAsPrivileged([
 	},
 ]);
 
-const gotTheLock = app.requestSingleInstanceLock();
+const gotTheLock = app.requestSingleInstanceLock({
+	workspace: PROTOCOL_SCHEME,
+});
 
 if (!gotTheLock) {
 	app.exit(0);
@@ -295,10 +318,10 @@ if (!gotTheLock) {
 			}
 			return net.fetch(pathToFileURL(iconPath).toString());
 		};
-		protocol.handle("superset-icon", iconProtocolHandler);
+		protocol.handle(ICON_PROTOCOL, iconProtocolHandler);
 		session
-			.fromPartition("persist:superset")
-			.protocol.handle("superset-icon", iconProtocolHandler);
+			.fromPartition(SESSION_PARTITION)
+			.protocol.handle(ICON_PROTOCOL, iconProtocolHandler);
 
 		// Serve system fonts (e.g. SF Mono on macOS) via custom protocol
 		// so the renderer can use @font-face with font-src 'self' CSP
@@ -324,10 +347,10 @@ if (!gotTheLock) {
 				}
 				return new Response("Not found", { status: 404 });
 			};
-			protocol.handle("superset-font", fontProtocolHandler);
+			protocol.handle(FONT_PROTOCOL, fontProtocolHandler);
 			session
-				.fromPartition("persist:superset")
-				.protocol.handle("superset-font", fontProtocolHandler);
+				.fromPartition(SESSION_PARTITION)
+				.protocol.handle(FONT_PROTOCOL, fontProtocolHandler);
 		}
 
 		ensureProjectIconsDir();

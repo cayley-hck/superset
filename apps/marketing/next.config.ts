@@ -16,6 +16,7 @@ const config: NextConfig = {
 	reactStrictMode: true,
 	reactCompiler: true,
 	typescript: { ignoreBuildErrors: true },
+	output: "standalone",
 
 	images: {
 		remotePatterns: [

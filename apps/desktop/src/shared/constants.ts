@@ -14,6 +14,14 @@ export const SUPERSET_DIR_NAME = workspace
 export const PROTOCOL_SCHEME = workspace
 	? `superset-${workspace}`
 	: PROTOCOL_SCHEMES.PROD;
+// Session partition for Chromium data isolation (cookies, cache, storage)
+export const SESSION_PARTITION = workspace
+	? `persist:superset-${workspace}`
+	: "persist:superset";
+// Custom protocol schemes for loading local resources (icons, fonts)
+// These are process-local (per Electron instance) so they don't need workspace prefixing
+export const ICON_PROTOCOL = "superset-icon";
+export const FONT_PROTOCOL = "superset-font";
 // Project-level directory name (always .superset, not conditional)
 export const PROJECT_SUPERSET_DIR_NAME = ".superset";
 export const WORKTREES_DIR_NAME = "worktrees";

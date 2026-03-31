@@ -5,6 +5,7 @@
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { config as loadDotenv } from "dotenv";
 import type { Configuration } from "electron-builder";
 import pkg from "./package.json";
 import {
@@ -12,16 +13,39 @@ import {
 	packagedNodeModuleCopies,
 } from "./runtime-dependencies";
 
+const envName =
+	process.env.SUPERSET_ENV ||
+	(process.env.NODE_ENV === "production" ? "production" : "development");
+loadDotenv({ path: join(__dirname, "../../.env"), quiet: true });
+loadDotenv({
+	path: join(__dirname, `../../.env.${envName}`),
+	override: true,
+	quiet: true,
+});
+
 const currentYear = new Date().getFullYear();
 const author = pkg.author?.name ?? pkg.author;
-const productName = pkg.productName;
+
+// Support custom workspace builds (e.g. SUPERSET_WORKSPACE_NAME=myspace)
+const workspaceName = process.env.SUPERSET_WORKSPACE_NAME;
+const isCustomWorkspace = workspaceName && workspaceName !== "superset";
+const resolvedProductName = isCustomWorkspace
+	? workspaceName.charAt(0).toUpperCase() + workspaceName.slice(1)
+	: (pkg.productName as string);
+const resolvedAppId = isCustomWorkspace
+	? `com.${workspaceName}.desktop`
+	: "com.superset.desktop";
+const resolvedProtocolScheme = isCustomWorkspace
+	? `superset-${workspaceName.toLowerCase()}`
+	: "superset";
+
 const macIconPath = join(pkg.resources, "build/icons/icon.icns");
 const linuxIconPath = join(pkg.resources, "build/icons");
 const winIconPath = join(pkg.resources, "build/icons/icon.ico");
 
 const config: Configuration = {
-	appId: "com.superset.desktop",
-	productName,
+	appId: resolvedAppId,
+	productName: resolvedProductName,
 	copyright: `Copyright © ${currentYear} — ${author}`,
 	electronVersion: pkg.devDependencies.electron.replace(/^\^/, ""),
 
@@ -30,11 +54,16 @@ const config: Configuration = {
 	generateUpdatesFilesForAllChannels: true,
 
 	// Generate latest-mac.yml for auto-update (workflow handles actual upload)
-	publish: {
-		provider: "github",
-		owner: "superset-sh",
-		repo: "superset",
-	},
+	// Custom workspace builds skip publishing to avoid overwriting official releases
+	...(isCustomWorkspace
+		? {}
+		: {
+				publish: {
+					provider: "github" as const,
+					owner: "superset-sh",
+					repo: "superset",
+				},
+			}),
 
 	// Directories
 	directories: {
@@ -100,26 +129,26 @@ const config: Configuration = {
 			"build/entitlements.mac.inherit.plist",
 		),
 		extendInfo: {
-			CFBundleName: productName,
-			CFBundleDisplayName: productName,
+			CFBundleName: resolvedProductName,
+			CFBundleDisplayName: resolvedProductName,
 			// Required for macOS microphone permission prompt
 			NSMicrophoneUsageDescription:
-				"Superset needs microphone access so voice-enabled tools like Codex transcription can capture audio input.",
+				`${resolvedProductName} needs microphone access so voice-enabled tools like Codex transcription can capture audio input.`,
 			// Required for macOS local network permission prompt
 			NSLocalNetworkUsageDescription:
-				"Superset needs access to your local network to discover and connect to development servers running on your network.",
+				`${resolvedProductName} needs access to your local network to discover and connect to development servers running on your network.`,
 			// Bonjour service types to browse for (triggers the permission prompt)
 			NSBonjourServices: ["_http._tcp", "_https._tcp"],
 			// Required for Apple Events / Automation permission prompt
 			NSAppleEventsUsageDescription:
-				"Superset needs to interact with other applications to run terminal commands and development tools.",
+				`${resolvedProductName} needs to interact with other applications to run terminal commands and development tools.`,
 		},
 	},
 
 	// Deep linking protocol
 	protocols: {
-		name: productName,
-		schemes: ["superset"],
+		name: resolvedProductName,
+		schemes: [resolvedProtocolScheme],
 	},
 
 	// Linux
@@ -128,7 +157,7 @@ const config: Configuration = {
 		category: "Utility",
 		synopsis: pkg.description,
 		target: ["AppImage"],
-		artifactName: `superset-\${version}-\${arch}.\${ext}`,
+		artifactName: `${resolvedProductName.toLowerCase()}-\${version}-\${arch}.\${ext}`,
 	},
 
 	// Windows
@@ -140,7 +169,7 @@ const config: Configuration = {
 				arch: ["x64"],
 			},
 		],
-		artifactName: `${productName}-${pkg.version}-\${arch}.\${ext}`,
+		artifactName: `${resolvedProductName}-${pkg.version}-\${arch}.\${ext}`,
 	},
 
 	// NSIS installer (Windows)

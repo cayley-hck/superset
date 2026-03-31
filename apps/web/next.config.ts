@@ -15,6 +15,7 @@ if (process.env.NODE_ENV !== "production") {
 const config: NextConfig = {
 	reactCompiler: true,
 	typescript: { ignoreBuildErrors: true },
+	output: "standalone",
 
 	images: {
 		remotePatterns: [

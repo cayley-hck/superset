@@ -294,7 +294,7 @@ export function initTray(): void {
 		}
 
 		tray = new Tray(icon);
-		tray.setToolTip("Superset");
+		tray.setToolTip(app.name);
 
 		updateTrayMenu().catch((error) => {
 			console.error("[Tray] Failed to build initial menu:", error);

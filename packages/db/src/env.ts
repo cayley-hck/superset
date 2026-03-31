@@ -3,8 +3,17 @@ import { createEnv } from "@t3-oss/env-core";
 import { config } from "dotenv";
 import { z } from "zod";
 
-// Load .env from monorepo root
-config({ path: path.resolve(__dirname, "../../../.env"), quiet: true });
+const rootEnvDir = path.resolve(__dirname, "../../..");
+const envName =
+	process.env.SUPERSET_ENV ||
+	(process.env.NODE_ENV === "production" ? "production" : "development");
+
+config({ path: path.join(rootEnvDir, ".env"), quiet: true });
+config({
+	path: path.join(rootEnvDir, `.env.${envName}`),
+	override: true,
+	quiet: true,
+});
 
 export const env = createEnv({
 	server: {

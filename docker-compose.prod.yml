@@ -1,0 +1,155 @@
+# =============================================================================
+# Superset Production Docker Compose (Local Deployment)
+# =============================================================================
+# Usage:
+#   # Build and start all services
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+#   # View logs
+#   docker compose -f docker-compose.prod.yml logs -f
+#
+#   # Stop all services
+#   docker compose -f docker-compose.prod.yml down
+#
+#   # Stop and remove volumes (clean slate)
+#   docker compose -f docker-compose.prod.yml down -v
+#
+# Environment Variables Required:
+#   - DATABASE_URL: PostgreSQL connection string
+#   - ELECTRIC_SECRET: Secret for Electric SQL
+#   - See .env.example for all required variables
+# =============================================================================
+
+services:
+  # ============================================
+  # PostgreSQL Database (Optional - for local deployment)
+  # Uncomment if you need a local PostgreSQL instance
+  # ============================================
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: superset-postgres
+  #   environment:
+  #     POSTGRES_USER: superset
+  #     POSTGRES_PASSWORD: superset_secret
+  #     POSTGRES_DB: superset
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U superset -d superset"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 10s
+  #   restart: always
+  #   networks:
+  #     - superset-network
+
+  # ============================================
+  # Electric SQL Sync Engine
+  # ============================================
+  electric:
+    image: electricsql/electric:1.4.13
+    container_name: superset-electric-prod
+    ports:
+      - "3009:3000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL_UNPOOLED}
+      ELECTRIC_SECRET: ${ELECTRIC_SECRET:-local_electric_prod_secret}
+      ELECTRIC_WRITE_TO_PG_MODE: direct_writes
+      LOGICAL_PUBLISHER_HOST: ${LOGICAL_PUBLISHER_HOST:-electric}
+    restart: always
+    networks:
+      - superset-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ============================================
+  # All Next.js Apps (api, web, admin, marketing, docs)
+  # Single container running all apps for simplicity
+  # ============================================
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: runner
+      args:
+        - NODE_ENV=production
+    image: superset-apps:${SUPERSET_VERSION:-latest}
+    container_name: superset-apps-prod
+    ports:
+      - "3000:3000"  # web
+      - "3001:3001"  # api
+      - "3002:3002"  # marketing
+      - "3003:3003"  # admin
+      - "3004:3004"  # docs
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      # Override URLs for container networking
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - NEXT_PUBLIC_WEB_URL=http://localhost:3000
+      - NEXT_PUBLIC_MARKETING_URL=http://localhost:3002
+      - NEXT_PUBLIC_ADMIN_URL=http://localhost:3003
+      - NEXT_PUBLIC_DOCS_URL=http://localhost:3004
+    depends_on:
+      electric:
+        condition: service_healthy
+      # postgres:
+      #   condition: service_healthy
+    restart: always
+    networks:
+      - superset-network
+    healthcheck:
+      # Use desktop version endpoint as health check (simple GET that returns JSON)
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/api/desktop/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ============================================
+  # Caddy Reverse Proxy (HTTP/2 for SSE)
+  # Provides HTTP/2 multiplexing for Electric SQL SSE streams
+  # Avoids browser's 6-connection limit when using 10+ Electric streams
+  # ============================================
+  caddy:
+    image: caddy:2-alpine
+    container_name: superset-caddy-prod
+    ports:
+      - "3010:3010"
+    volumes:
+      - ./docker/Caddyfile.docker:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: always
+    networks:
+      - superset-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3010"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  superset-network:
+    driver: bridge
+    name: superset-network
+
+volumes:
+  # postgres_data:
+  #   name: superset-postgres-data
+  caddy_data:
+    name: superset-caddy-data
+  caddy_config:
+    name: superset-caddy-config

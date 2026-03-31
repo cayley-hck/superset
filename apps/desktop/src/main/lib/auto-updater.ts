@@ -6,6 +6,7 @@ import { setSkipQuitConfirmation } from "main/index";
 import { prerelease } from "semver";
 import { AUTO_UPDATE_STATUS, type AutoUpdateStatus } from "shared/auto-update";
 import { PLATFORM } from "shared/constants";
+import { getWorkspaceName } from "shared/env.shared";
 
 const UPDATE_CHECK_INTERVAL_MS = 1000 * 60 * 60 * 4; // 4 hours
 
@@ -22,6 +23,9 @@ function isPrereleaseBuild(): boolean {
 
 const IS_PRERELEASE = isPrereleaseBuild();
 const IS_AUTO_UPDATE_PLATFORM = PLATFORM.IS_MAC || PLATFORM.IS_LINUX;
+// Custom workspace builds (e.g. myspace) skip auto-updates to prevent
+// the official release from overwriting the self-hosted build
+const IS_CUSTOM_WORKSPACE = getWorkspaceName() !== undefined;
 
 // Use explicit feed URLs to ensure we always fetch platform-specific manifests
 // (for example latest-mac.yml and latest-linux.yml) from the correct release.
@@ -102,7 +106,11 @@ export function dismissUpdate(): void {
 }
 
 export function checkForUpdates(): void {
-	if (env.NODE_ENV === "development" || !IS_AUTO_UPDATE_PLATFORM) {
+	if (
+		env.NODE_ENV === "development" ||
+		!IS_AUTO_UPDATE_PLATFORM ||
+		IS_CUSTOM_WORKSPACE
+	) {
 		return;
 	}
 	isDismissed = false;
@@ -119,6 +127,15 @@ export function checkForUpdates(): void {
 }
 
 export function checkForUpdatesInteractive(): void {
+	if (IS_CUSTOM_WORKSPACE) {
+		dialog.showMessageBox({
+			type: "info",
+			title: "Updates",
+			message:
+				"Auto-updates are disabled for custom workspace builds. Please update manually.",
+		});
+		return;
+	}
 	if (env.NODE_ENV === "development") {
 		dialog.showMessageBox({
 			type: "info",
@@ -200,7 +217,16 @@ export function simulateError(): void {
 }
 
 export function setupAutoUpdater(): void {
-	if (env.NODE_ENV === "development" || !IS_AUTO_UPDATE_PLATFORM) {
+	if (
+		env.NODE_ENV === "development" ||
+		!IS_AUTO_UPDATE_PLATFORM ||
+		IS_CUSTOM_WORKSPACE
+	) {
+		if (IS_CUSTOM_WORKSPACE) {
+			console.info(
+				"[auto-updater] Disabled for custom workspace build (prevents official release overwrite)",
+			);
+		}
 		return;
 	}
 

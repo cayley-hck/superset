@@ -1,7 +1,8 @@
 import { COMPANY } from "@superset/shared/constants";
+import { GeistMono } from "geist/font/mono";
 import { GeistPixelGrid, GeistPixelSquare } from "geist/font/pixel";
+import { GeistSans } from "geist/font/sans";
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Inter, Micro_5 } from "next/font/google";
 
 import { CookieConsent } from "@/components/CookieConsent";
 import {
@@ -16,27 +17,6 @@ import { GitHubStarCounter } from "./components/GitHubStarCounter";
 import { Header } from "./components/Header";
 import "./globals.css";
 import { Providers } from "./providers";
-
-const ibmPlexMono = IBM_Plex_Mono({
-	weight: ["300", "400", "500"],
-	subsets: ["latin"],
-	variable: "--font-ibm-plex-mono",
-	display: "swap",
-});
-
-const inter = Inter({
-	weight: ["300", "400", "500"],
-	subsets: ["latin"],
-	variable: "--font-inter",
-	display: "swap",
-});
-
-const micro5 = Micro_5({
-	weight: "400",
-	subsets: ["latin"],
-	variable: "--font-micro5",
-	display: "swap",
-});
 
 const siteDescription =
 	"Run 10+ parallel coding agents on your machine. Spin up new coding tasks while waiting for your current agent to finish. Quickly switch between tasks as they need your attention.";
@@ -115,7 +95,7 @@ export default function RootLayout({
 	return (
 		<html
 			lang="en"
-			className={`dark overscroll-none ${ibmPlexMono.variable} ${inter.variable} ${micro5.variable} ${GeistPixelSquare.variable} ${GeistPixelGrid.variable}`}
+			className={`dark overscroll-none ${GeistMono.variable} ${GeistSans.variable} ${GeistPixelSquare.variable} ${GeistPixelGrid.variable}`}
 			suppressHydrationWarning
 		>
 			<head>

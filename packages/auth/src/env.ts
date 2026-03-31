@@ -3,7 +3,17 @@ import { createEnv } from "@t3-oss/env-core";
 import { config } from "dotenv";
 import { z } from "zod";
 
-config({ path: path.resolve(process.cwd(), "../../../.env"), quiet: true });
+const rootEnvDir = path.resolve(import.meta.dirname, "../../..");
+const envName =
+	process.env.SUPERSET_ENV ||
+	(process.env.NODE_ENV === "production" ? "production" : "development");
+
+config({ path: path.join(rootEnvDir, ".env"), quiet: true });
+config({
+	path: path.join(rootEnvDir, `.env.${envName}`),
+	override: true,
+	quiet: true,
+});
 
 export const env = createEnv({
 	server: {
@@ -15,6 +25,7 @@ export const env = createEnv({
 		RESEND_API_KEY: z.string(),
 		KV_REST_API_URL: z.string(),
 		KV_REST_API_TOKEN: z.string(),
+		INTERNAL_TEAM: z.string().optional(),
 		STRIPE_SECRET_KEY: z.string(),
 		STRIPE_WEBHOOK_SECRET: z.string(),
 		STRIPE_PRO_MONTHLY_PRICE_ID: z.string(),

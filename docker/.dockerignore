@@ -1,0 +1,99 @@
+# =============================================================================
+# Docker Ignore File for Superset
+# Minimizes build context and speeds up image builds
+# =============================================================================
+
+# Dependencies (will be installed fresh in container)
+node_modules
+**/node_modules
+.pnp
+.pnp.js
+
+# Build outputs (will be built fresh in container)
+.next
+**/.next
+**/dist
+**/dist-electron
+**/.turbo
+**/.cache
+**/out
+**/.vercel
+**/build
+
+# Testing
+coverage
+**/.nyc_output
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/*.test.js
+**/*.spec.js
+
+# Environment files (passed via env_file in docker-compose)
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+**/.git
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+bun-debug.log*
+
+# AI Assistant configs (not needed in production)
+.claude
+.cursor
+.codex
+.agents
+.windsurf
+.aider
+
+# Documentation (not needed in runtime)
+README.md
+LICENSE
+*.md
+!packages/*/README.md
+docs/
+
+# Desktop specific (not built in Docker)
+apps/desktop
+packages/desktop-mcp
+
+# Mobile specific (not built in Docker)
+apps/mobile
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+.circleci
+
+# Docker files (avoid recursive copy)
+docker/
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Misc
+*.tgz
+*.zip
+.npmrc

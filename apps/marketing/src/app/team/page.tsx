@@ -44,7 +44,7 @@ export default function TeamPage() {
 						Meet the{" "}
 						<span
 							className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl ml-2 font-light tracking-wide"
-							style={{ fontFamily: "var(--font-micro5)" }}
+							style={{ fontFamily: "var(--font-geist-pixel-square)" }}
 						>
 							FOUNDERS
 						</span>

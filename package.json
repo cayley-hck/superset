@@ -19,6 +19,7 @@
 		"dev": "turbo run dev dev:caddy --filter=@superset/api --filter=@superset/web --filter=@superset/desktop --filter=electric-proxy --filter=//",
 		"dev:all": "turbo dev",
 		"dev:caddy": "dotenv -- caddy run --config Caddyfile",
+		"dev:desktop:production-backend": "SUPERSET_ENV=production turbo run dev --filter=@superset/desktop",
 		"dev:docs": "turbo dev --filter=@superset/docs",
 		"dev:marketing": "turbo dev --filter=@superset/marketing --filter=@superset/docs",
 		"build": "turbo build --filter=@superset/desktop",

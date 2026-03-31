@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, unlinkSync } from "node:fs";
 import { copyFile, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
+import { ICON_PROTOCOL } from "shared/constants";
 import { SUPERSET_HOME_DIR } from "./app-environment";
 
 export const PROJECT_ICONS_DIR = join(SUPERSET_HOME_DIR, "project-icons");
@@ -48,7 +49,7 @@ function removeExistingIcon(projectId: string): void {
  * Returns the protocol URL for a project icon.
  */
 export function getProjectIconProtocolUrl(projectId: string): string {
-	return `superset-icon://projects/${projectId}`;
+	return `${ICON_PROTOCOL}://projects/${projectId}`;
 }
 
 /**

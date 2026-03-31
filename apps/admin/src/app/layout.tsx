@@ -1,23 +1,12 @@
 import { Toaster } from "@superset/ui/sonner";
 import { cn } from "@superset/ui/utils";
+import { GeistMono } from "geist/font/mono";
+import { GeistSans } from "geist/font/sans";
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Inter } from "next/font/google";
 
 import "./globals.css";
 
 import { Providers } from "./providers";
-
-const ibmPlexMono = IBM_Plex_Mono({
-	weight: ["300", "400", "500"],
-	subsets: ["latin"],
-	variable: "--font-ibm-plex-mono",
-});
-
-const inter = Inter({
-	weight: ["300", "400", "500"],
-	subsets: ["latin"],
-	variable: "--font-inter",
-});
 
 export const metadata: Metadata = {
 	title: "Superset | Company Dashboard",
@@ -47,8 +36,8 @@ export default function RootLayout({
 			<body
 				className={cn(
 					"bg-background text-foreground min-h-screen font-sans antialiased",
-					inter.variable,
-					ibmPlexMono.variable,
+					GeistSans.variable,
+					GeistMono.variable,
 				)}
 			>
 				<Providers>

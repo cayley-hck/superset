@@ -2,11 +2,19 @@ import { chmodSync, existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { SUPERSET_DIR_NAME } from "shared/constants";
+import { getWorkspaceName } from "shared/env.shared";
 
 const SUPERSET_HOME_DIR_ENV = "SUPERSET_HOME_DIR";
 
-export const SUPERSET_HOME_DIR =
-	process.env[SUPERSET_HOME_DIR_ENV] || join(homedir(), SUPERSET_DIR_NAME);
+// When a custom workspace is active (e.g. SUPERSET_WORKSPACE_NAME=myspace),
+// always derive the home dir from SUPERSET_DIR_NAME to ensure isolation.
+// This prevents stale SUPERSET_HOME_DIR values in the shell from breaking isolation.
+const isCustomWorkspace = getWorkspaceName() !== undefined;
+const derivedHomeDir = join(homedir(), SUPERSET_DIR_NAME);
+
+export const SUPERSET_HOME_DIR = isCustomWorkspace
+	? derivedHomeDir
+	: (process.env[SUPERSET_HOME_DIR_ENV] || derivedHomeDir);
 process.env[SUPERSET_HOME_DIR_ENV] = SUPERSET_HOME_DIR;
 
 export const SUPERSET_HOME_DIR_MODE = 0o700;

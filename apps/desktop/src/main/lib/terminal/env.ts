@@ -2,6 +2,7 @@ import { exec } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import defaultShell from "default-shell";
+import { app } from "electron";
 import { env } from "shared/env.shared";
 import { getShellEnv } from "../agent-setup/shell-wrappers";
 
@@ -422,7 +423,7 @@ export function buildTerminalEnv(params: {
 	const terminalEnv: Record<string, string> = {
 		...baseEnv,
 		...shellEnv,
-		TERM_PROGRAM: "Superset",
+		TERM_PROGRAM: app.name,
 		TERM_PROGRAM_VERSION: process.env.npm_package_version || "1.0.0",
 		COLORTERM: "truecolor",
 		COLORFGBG: colorFgBg,

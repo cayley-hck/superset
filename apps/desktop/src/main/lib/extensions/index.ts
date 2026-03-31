@@ -5,7 +5,9 @@ import path from "node:path";
 import { app, session } from "electron";
 import { env } from "main/env.main";
 
-const APP_PARTITION = "persist:superset";
+import { SESSION_PARTITION } from "shared/constants";
+
+const APP_PARTITION = SESSION_PARTITION;
 const REACT_DEVTOOLS_EXTENSION_ID = "fmkadmapgofadopljbjfkapdkoienihi";
 
 function safeReadDir(pathname: string): string[] {

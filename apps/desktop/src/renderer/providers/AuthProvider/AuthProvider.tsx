@@ -23,6 +23,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 				const isExpired = new Date(storedToken.expiresAt) < new Date();
 				if (!isExpired) {
 					setAuthToken(storedToken.token);
+					console.info("[auth] hydrating from stored token", {
+						expiresAt: storedToken.expiresAt,
+						hasStoredToken: true,
+					});
 					try {
 						await refetchSession();
 					} catch (err) {
@@ -35,6 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 						const res = await authClient.token();
 						if (res.data?.token) {
 							setJwt(res.data.token);
+							console.info("[auth] jwt hydrated", {
+								hasJwt: true,
+								jwtLength: res.data.token.length,
+							});
+						} else {
+							console.warn("[auth] jwt hydration returned no token");
 						}
 					} catch (err) {
 						console.warn(
@@ -61,6 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 				setAuthToken(null);
 				await authClient.signOut({ fetchOptions: { throw: false } });
 				setAuthToken(data.token);
+				console.info("[auth] token changed", {
+					expiresAt: data.expiresAt,
+					hasToken: true,
+				});
 				try {
 					await refetchSession();
 				} catch (err) {
@@ -94,6 +108,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 				.then((res) => {
 					if (res.data?.token) {
 						setJwt(res.data.token);
+						console.info("[auth] jwt refreshed", {
+							hasJwt: true,
+							jwtLength: res.data.token.length,
+						});
+					} else {
+						console.warn("[auth] jwt refresh returned no token");
 					}
 				})
 				.catch((err: unknown) => {

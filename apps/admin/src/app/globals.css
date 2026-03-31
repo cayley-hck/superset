@@ -2,3 +2,8 @@
 
 @import "@superset/ui/globals.css";
 @source "../../../../packages/ui/src/**/*.{ts,tsx}";
+
+@theme {
+	--font-family-mono: var(--font-geist-mono), ui-monospace, monospace;
+	--font-family-sans: var(--font-geist-sans), ui-sans-serif, sans-serif;
+}

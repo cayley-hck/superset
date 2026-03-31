@@ -1,15 +1,12 @@
 import { RootProvider } from "fumadocs-ui/provider/next";
+import { GeistMono } from "geist/font/mono";
+import { GeistSans } from "geist/font/sans";
 import type { Metadata } from "next";
 import "./global.css";
 import { COMPANY } from "@superset/shared/constants";
-import { Inter } from "next/font/google";
 import { NavigationBar } from "@/app/components/NavigationBar";
 import { NavbarProvider } from "@/app/components/NavigationBar/components/NavigationMobile";
 import { OutlitProviderWrapper } from "@/app/providers";
-
-const inter = Inter({
-	subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
 	metadataBase: new URL(COMPANY.DOCS_URL),
@@ -64,7 +61,7 @@ export default function Layout({ children }: LayoutProps<"/">) {
 	return (
 		<html
 			lang="en"
-			className={`${inter.className} overscroll-none`}
+			className={`${GeistSans.className} ${GeistSans.variable} ${GeistMono.variable} overscroll-none`}
 			suppressHydrationWarning
 		>
 			<body className="flex flex-col min-h-screen overscroll-none">

@@ -1,0 +1,12 @@
+# HTTP/2 reverse proxy for Electric SQL SSE streams in Docker.
+# Avoids browser's 6-connection limit when using 10+ Electric streams.
+
+{
+	auto_https disable_redirects
+}
+
+https://localhost:3010 {
+	reverse_proxy api:3001 {
+		flush_interval -1
+	}
+}

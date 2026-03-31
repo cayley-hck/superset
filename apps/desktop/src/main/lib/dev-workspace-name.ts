@@ -4,13 +4,14 @@ import path from "node:path";
 import { workspaces, worktrees } from "@superset/local-db";
 import BetterSqlite3 from "better-sqlite3";
 import { and, desc, eq, isNull } from "drizzle-orm";
+import { SUPERSET_DIR_NAME } from "shared/constants";
 import { getWorkspaceName as getEnvWorkspaceName } from "shared/env.shared";
 import { deriveWorkspaceNameFromWorktreeSegments } from "shared/worktree-id";
 import { localDb } from "./local-db";
 
 const IS_DEV = process.env.NODE_ENV === "development";
-const WORKTREE_BASE = path.resolve(homedir(), ".superset/worktrees");
-const PROD_LOCAL_DB_PATH = path.join(homedir(), ".superset", "local.db");
+const WORKTREE_BASE = path.resolve(homedir(), SUPERSET_DIR_NAME, "worktrees");
+const PROD_LOCAL_DB_PATH = path.join(homedir(), SUPERSET_DIR_NAME, "local.db");
 
 function getWorktreeSegmentsFromCwd(cwd: string): string[] | undefined {
 	const cwdRelative = path.relative(WORKTREE_BASE, cwd);

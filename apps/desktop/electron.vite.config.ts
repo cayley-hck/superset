@@ -17,8 +17,17 @@ import {
 	htmlEnvTransformPlugin,
 } from "./vite/helpers";
 
-// override: true ensures .env values take precedence over inherited env vars
-config({ path: resolve(__dirname, "../../.env"), override: true, quiet: true });
+const rootEnvDir = resolve(__dirname, "../..");
+const envName =
+	process.env.SUPERSET_ENV ||
+	(process.env.NODE_ENV === "production" ? "production" : "development");
+
+config({ path: resolve(rootEnvDir, ".env"), quiet: true });
+config({
+	path: resolve(rootEnvDir, `.env.${envName}`),
+	override: true,
+	quiet: true,
+});
 
 const DEV_SERVER_PORT = Number(process.env.DESKTOP_VITE_PORT);
 

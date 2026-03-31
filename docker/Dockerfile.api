@@ -1,0 +1,48 @@
+# ============================================
+# Base Stage: Bun runtime
+# ============================================
+FROM oven/bun:1.3.6-alpine AS base
+WORKDIR /app
+RUN apk add --no-cache libc6-compat openssl ca-certificates
+
+# ============================================
+# Builder Stage: Build API app
+# ============================================
+FROM base AS builder
+
+# Copy all source code first
+COPY . .
+
+# Install all dependencies (ignore scripts to skip native modules like better-sqlite3)
+RUN bun install --ignore-scripts
+
+# Build API app (needs env vars because modules initialize at build time)
+RUN --mount=type=secret,id=env,target=/app/.env \
+    echo "Building API app..." && \
+    cd apps/api && \
+    set -a && . /app/.env && set +a && \
+    SKIP_ENV_VALIDATION=1 bun run build
+
+# ============================================
+# Runner Stage: Production runtime for API
+# ============================================
+FROM base AS runner
+
+ENV NODE_ENV=production
+ENV PORT=3001
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Copy standalone output from builder
+COPY --from=builder --chown=nextjs:nodejs /app/apps/api/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/api/.next/static ./apps/api/.next/static
+
+USER nextjs
+
+# Expose API port
+EXPOSE 3001
+
+# Start API server
+CMD ["node", "apps/api/server.js"]

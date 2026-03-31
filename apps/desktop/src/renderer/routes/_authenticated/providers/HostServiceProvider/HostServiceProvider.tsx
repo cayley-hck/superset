@@ -48,6 +48,23 @@ export function HostServiceProvider({ children }: { children: ReactNode }) {
 		[organizations],
 	);
 
+	useEffect(() => {
+		console.info("[host-service] organizations collection snapshot", {
+			activeOrganizationId,
+			sessionOrganizationIds: session?.session?.organizationIds ?? [],
+			electricOrganizationIds: orgIds,
+			organizationCount: orgIds.length,
+		});
+		if (
+			(session?.session?.organizationIds?.length ?? 0) > 0 &&
+			orgIds.length === 0
+		) {
+			console.warn(
+				"[host-service] organizations collection is empty despite session organizations",
+			);
+		}
+	}, [activeOrganizationId, orgIds, session?.session?.organizationIds]);
+
 	// Start a host service for every org
 	useEffect(() => {
 		for (const orgId of orgIds) {

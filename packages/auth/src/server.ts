@@ -32,7 +32,7 @@ import { acceptInvitationEndpoint } from "./lib/accept-invitation-endpoint";
 import { generateMagicTokenForInvite } from "./lib/generate-magic-token";
 import { invitationRateLimit } from "./lib/rate-limit";
 import { resend } from "./lib/resend";
-import { stripeClient } from "./stripe";
+import { isInternalTeam, stripeClient } from "./stripe";
 import { formatPrice, getOrganizationOwners } from "./utils";
 
 const qstash = new Client({ token: env.QSTASH_TOKEN });
@@ -91,6 +91,7 @@ export const auth = betterAuth({
 		github: {
 			clientId: env.GH_CLIENT_ID,
 			clientSecret: env.GH_CLIENT_SECRET,
+			scope: ["user:email"],
 		},
 		google: {
 			clientId: env.GOOGLE_CLIENT_ID,
@@ -283,25 +284,34 @@ export const auth = betterAuth({
 				},
 
 				afterCreateOrganization: async ({ organization, user }) => {
-					const customer = await stripeClient.customers.create({
-						name: organization.name,
-						email: user.email,
-						metadata: {
-							organizationId: organization.id,
-							organizationSlug: organization.slug,
-						},
-					});
+					if (!isInternalTeam) {
+						const customer = await stripeClient.customers.create({
+							name: organization.name,
+							email: user.email,
+							metadata: {
+								organizationId: organization.id,
+								organizationSlug: organization.slug,
+							},
+						});
 
-					await db
-						.update(authSchema.organizations)
-						.set({ stripeCustomerId: customer.id })
-						.where(eq(authSchema.organizations.id, organization.id));
+						await db
+							.update(authSchema.organizations)
+							.set({ stripeCustomerId: customer.id })
+							.where(eq(authSchema.organizations.id, organization.id));
+					} else {
+						await db.insert(subscriptions).values({
+							plan: "pro",
+							referenceId: organization.id,
+							status: "active",
+							seats: 999,
+						});
+					}
 
 					await seedDefaultStatuses(organization.id);
 				},
 
 				beforeDeleteOrganization: async ({ organization }) => {
-					if (!organization.stripeCustomerId) return;
+					if (isInternalTeam || !organization.stripeCustomerId) return;
 
 					const subs = await stripeClient.subscriptions.list({
 						customer: organization.stripeCustomerId,
@@ -313,7 +323,7 @@ export const auth = betterAuth({
 				},
 
 				afterUpdateOrganization: async ({ organization }) => {
-					if (!organization?.stripeCustomerId) return;
+					if (isInternalTeam || !organization?.stripeCustomerId) return;
 
 					await stripeClient.customers.update(organization.stripeCustomerId, {
 						name: organization.name,
@@ -321,6 +331,7 @@ export const auth = betterAuth({
 				},
 
 				beforeAddMember: async ({ organization }) => {
+					if (isInternalTeam) return;
 					const subscription = await db.query.subscriptions.findFirst({
 						where: and(
 							eq(subscriptions.referenceId, organization.id),
@@ -378,6 +389,7 @@ export const auth = betterAuth({
 						});
 					}
 
+					if (isInternalTeam) return;
 					if (!subscription?.stripeSubscriptionId) return;
 					if (subscription.plan === "enterprise") return;
 
@@ -449,6 +461,7 @@ export const auth = betterAuth({
 				},
 
 				afterRemoveMember: async ({ user, organization }) => {
+					if (isInternalTeam) return;
 					await resend.emails.send({
 						from: "Superset <noreply@superset.sh>",
 						to: user.email,

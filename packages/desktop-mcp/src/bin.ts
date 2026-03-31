@@ -4,9 +4,16 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { config } from "dotenv";
 import { createMcpServer } from "./mcp/index.js";
 
-// Load the monorepo root .env so env vars like DESKTOP_AUTOMATION_PORT are
-// available regardless of the working directory the MCP server is spawned from.
-config({ path: resolve(import.meta.dirname, "../../../.env") });
+const rootEnvDir = resolve(import.meta.dirname, "../../..");
+const envName =
+	process.env.SUPERSET_ENV ||
+	(process.env.NODE_ENV === "production" ? "production" : "development");
+
+config({ path: resolve(rootEnvDir, ".env") });
+config({
+	path: resolve(rootEnvDir, `.env.${envName}`),
+	override: true,
+});
 
 const server = createMcpServer();
 const transport = new StdioServerTransport();

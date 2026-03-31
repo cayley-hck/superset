@@ -6,6 +6,7 @@ import { buildWhereClause } from "./utils";
 interface AuthInfo {
 	userId: string;
 	organizationIds: string[];
+	authSource: "jwt" | "session";
 }
 
 async function authenticate(request: Request): Promise<AuthInfo | null> {
@@ -18,6 +19,7 @@ async function authenticate(request: Request): Promise<AuthInfo | null> {
 				return {
 					userId: payload.sub,
 					organizationIds: payload.organizationIds as string[],
+					authSource: "jwt",
 				};
 			}
 		} catch {}
@@ -28,20 +30,48 @@ async function authenticate(request: Request): Promise<AuthInfo | null> {
 	return {
 		userId: sessionData.user.id,
 		organizationIds: sessionData.session.organizationIds ?? [],
+		authSource: "session",
 	};
 }
 
 export async function GET(request: Request): Promise<Response> {
+	const electricDebug = process.env.ELECTRIC_DEBUG === "1";
 	const authInfo = await authenticate(request);
 	if (!authInfo) {
+		if (electricDebug) {
+			console.warn("[electric] unauthorized request", {
+				hasAuthorizationHeader: !!request.headers.get("Authorization"),
+				url: request.url,
+			});
+		}
 		return new Response("Unauthorized", { status: 401 });
 	}
 
 	const url = new URL(request.url);
 
 	const organizationId = url.searchParams.get("organizationId");
+	const tableName = url.searchParams.get("table");
+
+	if (electricDebug) {
+		console.info("[electric] request", {
+			table: tableName,
+			organizationId,
+			userId: authInfo.userId,
+			organizationIds: authInfo.organizationIds,
+			authSource: authInfo.authSource,
+			hasAuthorizationHeader: !!request.headers.get("Authorization"),
+		});
+	}
 
 	if (organizationId && !authInfo.organizationIds.includes(organizationId)) {
+		if (electricDebug) {
+			console.warn("[electric] forbidden organization", {
+				table: tableName,
+				organizationId,
+				userId: authInfo.userId,
+				organizationIds: authInfo.organizationIds,
+			});
+		}
 		return new Response("Not a member of this organization", { status: 403 });
 	}
 
@@ -54,7 +84,6 @@ export async function GET(request: Request): Promise<Response> {
 		}
 	});
 
-	const tableName = url.searchParams.get("table");
 	if (!tableName) {
 		return new Response("Missing table parameter", { status: 400 });
 	}
@@ -89,6 +118,16 @@ export async function GET(request: Request): Promise<Response> {
 	}
 
 	const response = await fetch(originUrl.toString());
+
+	if (electricDebug) {
+		console.info("[electric] upstream response", {
+			table: tableName,
+			organizationId,
+			status: response.status,
+			statusText: response.statusText,
+			upstreamUrl: originUrl.toString().replace(env.ELECTRIC_SECRET, "[redacted]"),
+		});
+	}
 
 	const headers = new Headers(response.headers);
 	if (headers.get("content-encoding")) {

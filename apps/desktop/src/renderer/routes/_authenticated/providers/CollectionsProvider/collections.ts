@@ -39,6 +39,11 @@ const columnMapper = snakeCamelMapper();
 
 const electricUrl = `${env.NEXT_PUBLIC_ELECTRIC_URL}/v1/shape`;
 
+console.info("[electric] configured URL", {
+	baseUrl: env.NEXT_PUBLIC_ELECTRIC_URL,
+	shapeUrl: electricUrl,
+});
+
 const apiKeyDisplaySchema = z.object({
 	id: z.string(),
 	name: z.string().nullable(),
@@ -118,6 +123,11 @@ const apiClient = createTRPCProxyClient<AppRouter>({
 const electricHeaders = {
 	Authorization: () => {
 		const token = getJwt();
+		if (process.env.NODE_ENV === "development") {
+			console.info("[electric] auth header state", {
+				hasJwt: !!token,
+			});
+		}
 		return token ? `Bearer ${token}` : "";
 	},
 };
@@ -576,9 +586,46 @@ export async function preloadCollections(
 		? [...orgCollections, chatSessions, sessionHosts]
 		: orgCollections;
 
-	await Promise.allSettled(
+	const collectionNames = Object.entries(collections)
+		.filter(([name]) => includeChatCollections || !["chatSessions", "sessionHosts"].includes(name))
+		.map(([name]) => name);
+
+	console.info("[electric] preload start", {
+		organizationId,
+		enableV2Cloud,
+		includeChatCollections,
+		collectionCount: collectionsToPreload.length,
+		collections: collectionNames,
+	});
+
+	const results = await Promise.allSettled(
 		collectionsToPreload.map((c) => (c as Collection<object>).preload()),
 	);
+
+	const failures = results
+		.map((result, index) => ({ result, name: collectionNames[index] ?? `collection-${index}` }))
+		.filter(
+			(
+				entry,
+			): entry is {
+				result: PromiseRejectedResult;
+				name: string;
+			} => entry.result.status === "rejected",
+		)
+		.map((entry) => ({
+			name: entry.name,
+			reason:
+				entry.result.reason instanceof Error
+					? entry.result.reason.message
+					: String(entry.result.reason),
+		}));
+
+	console.info("[electric] preload complete", {
+		organizationId,
+		successCount: results.length - failures.length,
+		failureCount: failures.length,
+		failures,
+	});
 }
 
 /**
