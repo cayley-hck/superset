@@ -66,6 +66,7 @@ const {
 	createDroidWrapper,
 	createMastraWrapper,
 	getClaudeGlobalSettingsJsonContent,
+	getClaudeManagedHookCommand,
 	getCodexGlobalHooksJsonContent,
 	getCursorHooksJsonContent,
 	getCopilotHookScriptPath,
@@ -74,6 +75,8 @@ const {
 	getMastraHooksJsonContent,
 } = await import("./agent-wrappers");
 const { reconcileManagedEntries } = await import("./agent-wrappers-common");
+
+const managedClaudeHookCommand = getClaudeManagedHookCommand();
 
 describe("reconcileManagedEntries", () => {
 	it("preserves user-managed entries while replacing stale managed entries", () => {
@@ -194,7 +197,7 @@ describe("agent-wrappers copilot", () => {
 		expect(wrapper).toContain('_superset_emit_event "Start"');
 		expect(wrapper).toContain('_superset_emit_event "PermissionRequest"');
 		expect(wrapper).toContain(
-			`"$REAL_BIN" -c 'notify=["bash","${path.join(TEST_HOOKS_DIR, "notify.sh")}"]' "$@"`,
+			`"$REAL_BIN" --enable codex_hooks -c 'notify=["bash","${path.join(TEST_HOOKS_DIR, "notify.sh")}"]' "$@"`,
 		);
 		expect(wrapper).toContain("SUPERSET_CODEX_START_WATCHER_PID");
 		expect(wrapper).toContain('kill "$SUPERSET_CODEX_START_WATCHER_PID"');
@@ -204,6 +207,46 @@ describe("agent-wrappers copilot", () => {
 		);
 		expect(execLine).not.toContain("{{NOTIFY_PATH}}");
 		expect(wrapper).toContain(execLine);
+	});
+
+	it("forwards codex_hooks enablement through the codex wrapper for manual launches", () => {
+		const realBinDir = path.join(TEST_ROOT, "real-bin");
+		const realCodex = path.join(realBinDir, "codex");
+		const wrapperPath = path.join(TEST_BIN_DIR, "codex");
+		const argsFile = path.join(TEST_ROOT, "codex-args.txt");
+
+		mkdirSync(realBinDir, { recursive: true });
+		writeFileSync(
+			realCodex,
+			`#!/bin/bash
+printf '%s\n' "$@" > "${argsFile}"
+exit 0
+`,
+			{ mode: 0o755 },
+		);
+		chmodSync(realCodex, 0o755);
+
+		createCodexWrapper();
+
+		execFileSync(wrapperPath, ["exec", "Reply with exactly OK."], {
+			env: {
+				...process.env,
+				PATH: `${TEST_BIN_DIR}:${realBinDir}:${process.env.PATH || ""}`,
+				SUPERSET_TAB_ID: "tab-1",
+			},
+			encoding: "utf-8",
+		});
+
+		expect(readFileSync(argsFile, "utf-8")).toBe(
+			`${[
+				"--enable",
+				"codex_hooks",
+				"-c",
+				`notify=["bash","${path.join(TEST_HOOKS_DIR, "notify.sh")}"]`,
+				"exec",
+				"Reply with exactly OK.",
+			].join("\n")}\n`,
+		);
 	});
 
 	it("creates mastracode wrapper passthrough", () => {
@@ -625,7 +668,7 @@ describe("agent-wrappers claude settings.json", () => {
 			expect(Array.isArray(hooks)).toBe(true);
 			expect(
 				hooks.some((def) =>
-					def.hooks.some((hook) => hook.command === notifyPath),
+					def.hooks.some((hook) => hook.command === managedClaudeHookCommand),
 				),
 			).toBe(true);
 		}
@@ -686,7 +729,8 @@ describe("agent-wrappers claude settings.json", () => {
 			parsed.hooks.UserPromptSubmit.some(
 				(def: { hooks: Array<{ command: string }> }) =>
 					def.hooks.some(
-						(hook: { command: string }) => hook.command === notifyPath,
+						(hook: { command: string }) =>
+							hook.command === managedClaudeHookCommand,
 					),
 			),
 		).toBe(true);
@@ -762,7 +806,7 @@ describe("agent-wrappers claude settings.json", () => {
 			expect(Array.isArray(hooks)).toBe(true);
 			expect(
 				hooks.some((def) =>
-					def.hooks.some((hook) => hook.command === currentHookPath),
+					def.hooks.some((hook) => hook.command === managedClaudeHookCommand),
 				),
 			).toBe(true);
 			expect(
@@ -914,6 +958,25 @@ describe("agent-wrappers codex hooks.json", () => {
 					),
 			),
 		).toBe(true);
+	});
+
+	it("does not add UserPromptSubmit to the Codex fallback hooks.json merge", () => {
+		const notifyPath = "/tmp/.superset/hooks/notify.sh";
+		const content = getCodexGlobalHooksJsonContent(notifyPath);
+		expect(content).not.toBeNull();
+		if (content === null) throw new Error("Expected content");
+
+		const parsed = JSON.parse(content) as {
+			hooks: Record<
+				string,
+				Array<{
+					matcher?: string;
+					hooks: Array<{ type: string; command: string }>;
+				}>
+			>;
+		};
+
+		expect(parsed.hooks.UserPromptSubmit).toBeUndefined();
 	});
 
 	it("replaces stale Codex hook commands from old superset paths", () => {

@@ -3,8 +3,7 @@ interface TerminalCreateOrAttachInput {
 	tabId: string;
 	workspaceId: string;
 	cwd?: string;
-	taskPromptContent?: string;
-	taskPromptFileName?: string;
+	joinPending?: boolean;
 }
 
 interface TerminalWriteInput {
@@ -22,8 +21,6 @@ interface LaunchCommandInPaneOptions {
 	createOrAttach: (input: TerminalCreateOrAttachInput) => Promise<unknown>;
 	write: (input: TerminalWriteInput) => Promise<unknown>;
 	noExecute?: boolean;
-	taskPromptContent?: string;
-	taskPromptFileName?: string;
 }
 
 function normalizeTerminalCommand(command: string): string {
@@ -83,17 +80,36 @@ export async function launchCommandInPane({
 	createOrAttach,
 	write,
 	noExecute,
-	taskPromptContent,
-	taskPromptFileName,
 }: LaunchCommandInPaneOptions): Promise<void> {
+	await ensureTerminalAttached({
+		paneId,
+		tabId,
+		workspaceId,
+		cwd,
+		createOrAttach,
+	});
+
+	await writeCommandInPane({ paneId, command, write, noExecute });
+}
+
+export async function ensureTerminalAttached({
+	paneId,
+	tabId,
+	workspaceId,
+	cwd,
+	createOrAttach,
+}: {
+	paneId: string;
+	tabId: string;
+	workspaceId: string;
+	cwd?: string;
+	createOrAttach: (input: TerminalCreateOrAttachInput) => Promise<unknown>;
+}): Promise<void> {
 	await createOrAttach({
 		paneId,
 		tabId,
 		workspaceId,
 		cwd,
-		taskPromptContent,
-		taskPromptFileName,
+		joinPending: true,
 	});
-
-	await writeCommandInPane({ paneId, command, write, noExecute });
 }

@@ -74,6 +74,10 @@ export default defineConfig({
 				process.env.NEXT_PUBLIC_WEB_URL,
 				"https://app.superset.sh",
 			),
+			"process.env.NEXT_PUBLIC_MARKETING_URL": defineEnv(
+				process.env.NEXT_PUBLIC_MARKETING_URL,
+				"https://superset.sh",
+			),
 			"process.env.NEXT_PUBLIC_DOCS_URL": defineEnv(
 				process.env.NEXT_PUBLIC_DOCS_URL,
 				"https://docs.superset.sh",
@@ -99,9 +103,6 @@ export default defineConfig({
 			"process.env.ELECTRIC_PORT": defineEnv(process.env.ELECTRIC_PORT),
 			"process.env.SUPERSET_WORKSPACE_NAME": defineEnv(
 				process.env.SUPERSET_WORKSPACE_NAME,
-			),
-			"process.env.NEXT_PUBLIC_OUTLIT_KEY": defineEnv(
-				process.env.NEXT_PUBLIC_OUTLIT_KEY,
 			),
 		},
 
@@ -182,6 +183,10 @@ export default defineConfig({
 				process.env.NEXT_PUBLIC_WEB_URL,
 				"https://app.superset.sh",
 			),
+			"process.env.NEXT_PUBLIC_MARKETING_URL": defineEnv(
+				process.env.NEXT_PUBLIC_MARKETING_URL,
+				"https://superset.sh",
+			),
 			"process.env.NEXT_PUBLIC_ELECTRIC_URL": defineEnv(
 				process.env.NEXT_PUBLIC_ELECTRIC_URL,
 				"https://electric-proxy.avi-6ac.workers.dev",
@@ -211,9 +216,6 @@ export default defineConfig({
 			"process.env.ELECTRIC_PORT": defineEnv(process.env.ELECTRIC_PORT),
 			"process.env.SUPERSET_WORKSPACE_NAME": defineEnv(
 				process.env.SUPERSET_WORKSPACE_NAME,
-			),
-			"import.meta.env.NEXT_PUBLIC_OUTLIT_KEY": defineEnv(
-				process.env.NEXT_PUBLIC_OUTLIT_KEY,
 			),
 		},
 

@@ -6,7 +6,6 @@ import "./global.css";
 import { COMPANY } from "@superset/shared/constants";
 import { NavigationBar } from "@/app/components/NavigationBar";
 import { NavbarProvider } from "@/app/components/NavigationBar/components/NavigationMobile";
-import { OutlitProviderWrapper } from "@/app/providers";
 
 export const metadata: Metadata = {
 	metadataBase: new URL(COMPANY.DOCS_URL),
@@ -65,14 +64,12 @@ export default function Layout({ children }: LayoutProps<"/">) {
 			suppressHydrationWarning
 		>
 			<body className="flex flex-col min-h-screen overscroll-none">
-				<OutlitProviderWrapper>
-					<RootProvider>
-						<NavbarProvider>
-							<NavigationBar />
-							{children}
-						</NavbarProvider>
-					</RootProvider>
-				</OutlitProviderWrapper>
+				<RootProvider>
+					<NavbarProvider>
+						<NavigationBar />
+						{children}
+					</NavbarProvider>
+				</RootProvider>
 			</body>
 		</html>
 	);
